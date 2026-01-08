@@ -1,0 +1,10 @@
+streamlit
+pandas
+pdfplumber
+pypdfium2
+openpyxl
+Pillow
+pytesseract
+python-dateutil
+gspread
+google-auth

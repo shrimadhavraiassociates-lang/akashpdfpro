@@ -1,0 +1,17 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Secrets and Config (DO NOT UPLOAD THESE)
+credentials.json
+user_database.json
+.streamlit/secrets.toml
+
+# Build artifacts (exe files)
+dist/
+build/
+*.spec
+
+# Local Data
+*.xlsx
+*.pdf

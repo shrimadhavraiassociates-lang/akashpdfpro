@@ -1,0 +1,53 @@
+import os
+import re
+import pandas as pd
+import pdfplumber
+
+def clean_amount(value):
+    if value is None or value.strip() in ["", "-"]:
+        return 0.0
+    try:
+        return float(value.replace(",", ""))
+    except:
+        return 0.0
+
+def parse_sbi(pdf_path, password=None):
+    rows = []
+    date_pattern = re.compile(r"\d{2}[-/]\d{2}[-/]\d{4}")
+    with pdfplumber.open(pdf_path, password=password) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            if not text:
+                continue
+            lines = text.split("\n")
+            current_record = None
+            for line in lines:
+                if date_pattern.match(line[:10]):
+                    parts = line.split()
+                    if len(parts) < 7:
+                        continue
+                    txn_date = parts[0]
+                    val_date = parts[1]
+                    debit = clean_amount(parts[-4])
+                    credit = clean_amount(parts[-3])
+                    balance = clean_amount(parts[-2])
+                    desc = " ".join(parts[2:-4])
+                    ref_no = ""
+                    current_record = [txn_date, val_date, desc, ref_no, debit, credit, balance]
+                else:
+                    if current_record:
+                        # Continuation of Description, append
+                        current_record[2] += " " + line.strip()
+            if current_record:
+                rows.append(current_record)
+    df = pd.DataFrame(rows, columns=["Txn Date", "Value Date", "Description", "Ref No.", "Debit", "Credit", "Balance"])
+    return df
+
+def convert_sbi(pdf_path, password=None):
+    df = parse_sbi(pdf_path, password)
+    folder = os.path.join("C:/SMA_TRANSACTION", "SBI")
+    os.makedirs(folder, exist_ok=True)
+    filename = os.path.basename(pdf_path).replace(".pdf", "_sbi.xlsx")
+    out_path = os.path.join(folder, filename)
+    df.to_excel(out_path, index=False)
+    return out_path
