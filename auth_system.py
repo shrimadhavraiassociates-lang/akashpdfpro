@@ -31,9 +31,12 @@ def get_sheet():
     creds = None
     
     # 1. Streamlit Cloud Secrets
-    if "gcp_service_account" in st.secrets:
-        creds_dict = dict(st.secrets["gcp_service_account"])
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    try:
+        if "gcp_service_account" in st.secrets:
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    except Exception:
+        pass # Secrets not found or not accessible
     # 2. Local File (credentials.json) - For local testing
     elif os.path.exists("credentials.json"):
         creds = Credentials.from_service_account_file("credentials.json", scopes=scope)
@@ -210,6 +213,10 @@ def update_usage(username, pages_processed):
         db["users"][username]["pages_used_cycle"] += pages_processed
         db["users"][username]["total_pages_used"] += pages_processed
         save_db(db)
+
+def get_user_info(username):
+    db = load_db()
+    return db["users"].get(username)
 
 def get_all_users():
     db = load_db()

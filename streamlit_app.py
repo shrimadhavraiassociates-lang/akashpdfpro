@@ -134,10 +134,7 @@ def user_dashboard():
     username = st.session_state.username
     
     # Refresh user data to get latest stats
-    _, user = auth.authenticate(username, "dummy") # Hacky re-fetch or create a get_user func
-    # Better:
-    db = auth.load_db()
-    user = db["users"][username]
+    user = auth.get_user_info(username)
     
     st.sidebar.title(f"Welcome, {username}")
     st.sidebar.markdown(f"**Plan:** {user.get('plan', 'None')}")
