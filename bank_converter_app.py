@@ -539,16 +539,20 @@ class BankConverterApp(tk.Tk):
         if not license_key:
             messagebox.showinfo("Activation Cancelled", "No license key entered.")
             return
-        valid, data_or_msg = verify_license_key(license_key.strip(), self.machine_id)
-        if valid:
-            save_license_to_file(license_key.strip())
-            self.load_license()
-            self.show_home()
-            messagebox.showinfo(
-                "Activation Successful", f"License activated for {data_or_msg.get('name')}"
-            )
-        else:
-            messagebox.showerror("Invalid License", data_or_msg)
+        
+        try:
+            valid, data_or_msg = verify_license_key(license_key.strip(), self.machine_id)
+            if valid:
+                save_license_to_file(license_key.strip())
+                self.license_data = data_or_msg
+                messagebox.showinfo(
+                    "Activation Successful", f"License activated for {data_or_msg.get('name', 'User')}"
+                )
+                self.show_home()
+            else:
+                messagebox.showerror("Invalid License", data_or_msg)
+        except Exception as e:
+            messagebox.showerror("Activation Error", f"An error occurred: {e}")
 
     def convert_bank_page(self, bank_name):
         self.clear_frame()
