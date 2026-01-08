@@ -31,12 +31,9 @@ def get_sheet():
     creds = None
     
     # 1. Streamlit Cloud Secrets
-    try:
-        if "gcp_service_account" in st.secrets:
-            creds_dict = dict(st.secrets["gcp_service_account"])
-            creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-    except Exception:
-        pass # Secrets not found or not accessible
+    if "gcp_service_account" in st.secrets:
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     # 2. Local File (credentials.json) - For local testing
     elif os.path.exists("credentials.json"):
         creds = Credentials.from_service_account_file("credentials.json", scopes=scope)
