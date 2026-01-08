@@ -2,13 +2,10 @@ import json
 import os
 import hashlib
 import streamlit as st
-import gspread
-import google.auth
-from google.oauth2.service_account import Credentials
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-SHEET_NAME = "PDF_Pro_Users"
+DB_FILE = "users_db.json"
 
 # Plan Definitions
 PLANS = {
@@ -21,100 +18,36 @@ PLANS = {
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-def get_sheet():
-    """Authenticates and returns the Google Sheet object."""
-    scope = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
-    
-    creds = None
-    
-    # 1. Streamlit Cloud Secrets
-    if "gcp_service_account" in st.secrets:
-        creds_dict = dict(st.secrets["gcp_service_account"])
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-    # 2. Local File (credentials.json) - For local testing
-    elif os.path.exists("credentials.json"):
-        creds = Credentials.from_service_account_file("credentials.json", scopes=scope)
-    # 3. GCP Application Default Credentials (Cloud Run / App Engine)
-    else:
-        # This allows the app to run on Google Cloud Run using the service's identity
-        creds, _ = google.auth.default(scopes=scope)
-    
-    client = gspread.authorize(creds)
-    return client.open(SHEET_NAME).sheet1
-
 def load_db():
+    if not os.path.exists(DB_FILE):
+        return init_db()
+    
     try:
-        sheet = get_sheet()
-        records = sheet.get_all_records()
-        
-        # If sheet is empty, initialize it
-        if not records:
-            return init_db(sheet)
-
-        users = {}
-        for r in records:
-            uname = str(r['username'])
-            users[uname] = {
-                "password": r['password'],
-                "role": r['role'],
-                "plan": r['plan'],
-                "plan_start_date": r['plan_start_date'],
-                "plan_expiry_date": r['plan_expiry_date'],
-                "pages_used_cycle": int(r['pages_used_cycle']) if r['pages_used_cycle'] != "" else 0,
-                "total_pages_used": int(r['total_pages_used']) if r['total_pages_used'] != "" else 0
-            }
-        return {"users": users}
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
     except Exception as e:
-        st.error(f"Database Error: {e}")
+        print(f"Database Error: {e}")
         return {"users": {}}
 
-def init_db(sheet):
-    """Initializes the sheet with headers and default admin."""
-    headers = ["username", "password", "role", "plan", "plan_start_date", "plan_expiry_date", "pages_used_cycle", "total_pages_used"]
+def init_db():
+    """Initializes the local JSON DB with default admin."""
+    admin_data = {
+        "password": hash_password("9157199960"),
+        "role": "admin",
+        "plan": "Admin",
+        "plan_start_date": str(datetime.now().date()),
+        "plan_expiry_date": str((datetime.now() + relativedelta(years=100)).date()),
+        "pages_used_cycle": 0,
+        "total_pages_used": 0
+    }
     
-    admin_data = [
-        "admin", 
-        hash_password("9157199960"), 
-        "admin", 
-        "Admin", 
-        str(datetime.now().date()), 
-        str((datetime.now() + relativedelta(years=100)).date()), 
-        0, 
-        0
-    ]
-    
-    sheet.clear()
-    sheet.append_row(headers)
-    sheet.append_row(admin_data)
-    
-    # Return the structure so the app can continue without reloading
-    return load_db()
+    db = {"users": {"admin": admin_data}}
+    save_db(db)
+    return db
 
 def save_db(db):
-    sheet = get_sheet()
-    headers = ["username", "password", "role", "plan", "plan_start_date", "plan_expiry_date", "pages_used_cycle", "total_pages_used"]
-    
-    # Prepare data for bulk update
-    data = [headers]
-    for uname, info in db["users"].items():
-        row = [
-            uname,
-            info["password"],
-            info["role"],
-            info["plan"],
-            info["plan_start_date"],
-            info["plan_expiry_date"],
-            info["pages_used_cycle"],
-            info["total_pages_used"]
-        ]
-        data.append(row)
-    
-    # Clear and write all (Simple approach for small user base)
-    sheet.clear()
-    sheet.update(data)
+    with open(DB_FILE, "w") as f:
+        json.dump(db, f, indent=4)
 
 def register_user(username, password):
     db = load_db()

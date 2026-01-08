@@ -519,18 +519,40 @@ class BankConverterApp(tk.Tk):
             command=self.copy_machine_id,
         ).pack(pady=(10, 5))
 
-        tk.Button(
-            frame,
-            text="Activate License",
-            font=("Segoe UI", 12, "bold"),
-            bg="#FFA500",
-            fg="black",
-            relief="flat",
-            command=self.activate_license,
-            width=20,
-        ).pack(pady=10)
+        if self.license_data:
+            tk.Button(
+                frame,
+                text="Logout / Deactivate",
+                font=("Segoe UI", 12, "bold"),
+                bg="#d32f2f",
+                fg="white",
+                relief="flat",
+                command=self.deactivate_license,
+                width=20,
+            ).pack(pady=10)
+        else:
+            tk.Button(
+                frame,
+                text="Activate License",
+                font=("Segoe UI", 12, "bold"),
+                bg="#FFA500",
+                fg="black",
+                relief="flat",
+                command=self.activate_license,
+                width=20,
+            ).pack(pady=10)
 
         self.footer(frame)
+
+    def deactivate_license(self):
+        if messagebox.askyesno("Confirm", "Are you sure you want to deactivate/logout?"):
+            try:
+                save_license_to_file("")
+                self.license_data = None
+                self.show_home()
+                messagebox.showinfo("Deactivated", "License deactivated successfully.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not deactivate: {e}")
 
     def activate_license(self):
         license_key = simpledialog.askstring(
